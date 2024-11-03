@@ -8,7 +8,7 @@ void CatNoArgs(int argc) {
 	int bytes_read;
 
 	bytes_read = read(fd, buf, 4096);
-	while(bytes_read != -1) {
+	while(bytes_read > 0) {
 		printf("%.*s", bytes_read, buf); //?
 		bytes_read = read(fd, buf, 4096);
 	}
