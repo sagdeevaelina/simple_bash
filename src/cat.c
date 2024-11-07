@@ -3,6 +3,7 @@
 #include <fcntl.h>//тут флаги для опена
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
 typedef struct {	
 	bool number_all;
@@ -13,9 +14,13 @@ typedef struct {
 } CatInfo;
 
 
-void CatNoArgs(int fd) {
+void CatNoArgs(int fd, char* name) {
 	char buf[4096];
 	int bytes_read;
+	if(fd == -1) {
+		perror(name);
+		return;
+	}
 	bytes_read = read(fd, buf, 4096);
 	while(bytes_read > 0) {
 		printf("%.*s", bytes_read, buf); 
@@ -27,18 +32,18 @@ bool CatParseArg(CatInfo *info, char *argv, char* name) {
 	++argv;
 	if (*argv == '-') {
 		++argv;
-		if (srtcmp(argv,"number-nonblank") == 0) {
+		if (strcmp(argv,"number-nonblank") == 0) {
 			info->number_empty = true;
-		} else if (srtcmp(argv,"number") == 0) {
+		} else if (strcmp(argv,"number") == 0) {
 			info->number_all = true;
-		} else if (srtcmp(argv,"squeeze-blank") == 0) {
+		} else if (strcmp(argv,"squeeze-blank") == 0) {
 			info->squeeze = true;
 		} else {
-			dprintf(STDERR_FILENO, "%s: %s '%s'\n", name, "invalid option --",argv);
+			dprintf(STDERR_FILENO, "%s: %s%s\n", name, "invalid option2 -", argv);
 		}
 		return 1;
 	}
-	for (char *it = argv; *it; *it++) {
+	for (char *it = argv; *it; ++*it) {
 		switch(*it) {
 			case 'b':
 				info->number_empty = true;
@@ -56,31 +61,36 @@ bool CatParseArg(CatInfo *info, char *argv, char* name) {
 				info->show_tabs = true;
 				break;
 			default:
-				dprintf(STDERR_FILENO, "%s: %s '%s'\n", name, "invalid option --",argv);
+				dprintf(STDERR_FILENO, "%s: %s%s\n", name, "invalid option1 -", argv);
 				return false;
 		}
 	}
+	return true;
 }
 
 bool CatArgs(int argc, char *argv[]) {
-	//(void)argc; //зануляем ибо не используется
 	CatInfo info = {0,0,0,0,0};
 	for (int i = 1; i < argc; i++) {
 		if(*argv[i] == '-') {
-			return CarParseArg(&info, argv[i], argv[0]);
+			return CatParseArg(&info, argv[i], argv[0]);
 		}
 	}
-	//CatNoArgs(open(argv[1], O_RDONLY));
+	if (!(info.number_empty + info.number_all + info.squeeze + info.show_endl + info.show_tabs)) {
+			for (int i = 1; i < argc; i++) {
+				if(*argv[i] != '-') {
+					CatNoArgs(open(argv[i], O_RDONLY), argv[0]);
+					return false; 
+				}
+			}
+	}
+	return true;
 }
 
 int main(int argc, char **argv) {
 	(void)argv;
 	if (argc == 1) 
-		CatNoArgs(STDIN_FILENO);
+		CatNoArgs(STDIN_FILENO, argv[0]);
 	else
-		// for(int i = 1; i < argc; i++)
-		// 	{		printf("%s\n", *(argv+i)); //argv[i]
-		// 	}
 		if	(!CatArgs(argc, argv))
 			return EXIT_FAILURE;
 	return 0;
